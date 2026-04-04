@@ -60,8 +60,8 @@ def readIntV3(connection):
 
 def readInt(connection):
     # return readIntV1(connection)
-    return readIntV2(connection)
-    # return readIntV3(connection)
+    # return readIntV2(connection)
+    return readIntV3(connection)
 
 
 """
@@ -133,8 +133,8 @@ def writeIntV4(connection, value):
 def writeInt(connection, value):
     # writeIntV1(connection, value)
     # writeIntV2(connection, value)
-    writeIntV3(connection, value)
-    # writeIntV4(connection, value)
+    # writeIntV3(connection, value)
+    writeIntV4(connection, value)
 
 
 def readByte(connection):

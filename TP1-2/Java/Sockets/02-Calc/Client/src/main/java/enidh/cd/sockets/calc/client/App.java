@@ -13,7 +13,7 @@ public class App extends Thread {
     
     private static final String DefaultHostName = "localhost";
     
-    private static final int DefaultPort = 12345;
+    private static final int DefaultPort = 12349;
     
     private Socket s;
     
