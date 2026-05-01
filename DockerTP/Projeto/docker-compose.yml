@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  servidor_web:
+    build: .
+    container_name: web_app
+    ports:
+      - "5000:5000" 
+    depends_on:
+      - servidor_dados
+
+  servidor_dados:
+    build: .
+    container_name: data_app
+    command: python DataServer.py

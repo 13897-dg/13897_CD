@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>{{ traducoes('register') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/estilo.css') }}">
+</head>
+<body style="background-color: #e9ecef; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+
+    <div style="position: absolute; top: 15px; right: 20px; font-family: sans-serif; font-size: 14px;">
+        <a href="{{ url_for('change_language', lang='pt') }}?t={{ range(1, 10000) | random }}" 
+           style="text-decoration: none; font-weight: bold; color: {{ '#000' if lang == 'pt' else '#aaa' }};">PT</a> 
+        <span style="color: #ccc;">|</span>
+        <a href="{{ url_for('change_language', lang='en') }}?t={{ range(1, 10000) | random }}" 
+           style="text-decoration: none; font-weight: bold; color: {{ '#000' if lang == 'en' else '#aaa' }};">EN</a>
+    </div>
+
+    <div class="form-box" style="margin: 0; width: 100%; max-width: 400px; padding: 40px;">
+        
+        <h1 style="text-align: center; color: #0056b3; margin: 0 0 10px 0; font-size: 28px;">
+            {{ traducoes('site_header') }}
+        </h1>
+
+        <h2 style="text-align: center; color: #666; font-size: 18px; margin-bottom: 30px; font-weight: normal;">
+            {{ traducoes('register') }}
+        </h2>
+
+        <form action="/registo" method="POST">
+            <label style="font-weight: bold; font-size: 0.9em; color: #333;">{{ traducoes('email') }}</label>
+            <input type="email" name="email" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;">
+
+            <label style="font-weight: bold; font-size: 0.9em; color: #333;">{{ traducoes('password') }}</label>
+            <input type="password" name="password" required style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px;">
+
+            <button type="submit" style="width: 100%; padding: 12px; background-color: #0056b3; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">
+                {{ traducoes('register') }}
+            </button>
+        </form>
+
+        <p style="text-align: center; margin-top: 20px; font-size: 0.9em;">
+            <a href="{{ url_for('login') }}" style="color: #666; text-decoration: none;">&larr; {{ traducoes('back_to_login') }}</a>
+        </p>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,212 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<style>
+    /* estilos do player */
+    .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: block; }
+    .main-video { width: 100%; height: 280px; object-fit: cover; display: block; cursor: pointer; }
+    .custom-controls { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0, 0, 0, 0.7); padding: 0 10px; height: 40px; display: flex; align-items: center; gap: 15px; opacity: 0; transition: opacity 0.2s; box-sizing: border-box; }
+    .video-wrapper:hover .custom-controls { opacity: 1; }
+    .btn-icon { background: none; border: none; padding: 0; cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: white; }
+    .btn-icon svg { fill: white; width: 18px; height: 18px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+    .btn-icon:hover svg { fill: #3ea6ff; }
+    .progress-bar-area { flex-grow: 1; height: 5px; background: rgba(255,255,255,0.3); border-radius: 2px; cursor: pointer; position: relative; transition: height 0.1s; }
+    .progress-bar-area:hover { height: 8px; }
+    .progress-filled { height: 100%; background: #f00; width: 0%; border-radius: 2px; pointer-events: none; }
+    .ghost-video { display: none; position: absolute; bottom: 20px; left: 0; width: 100px; height: 56px; object-fit: cover; border: 2px solid #fff; background: #000; border-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 100; pointer-events: none; }
+    .card { transition: all 0.5s ease; }
+</style>
+
+<div style="margin-bottom: 30px; padding-top: 20px;">
+    <form action="/" method="GET" style="display: flex; justify-content: center; gap: 10px; max-width: 600px; margin: 0 auto;">
+        <input type="text" name="q" value="{{ query if query else '' }}" placeholder="{{ traducoes('search_placeholder') }}" 
+               style="width: 70%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin: 0;">
+        <button type="submit" style="width: 25%; padding: 10px; background-color: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            {{ traducoes('btn_search') }}
+        </button>
+    </form>
+    {% if query %}
+        <p style="text-align: center; margin-top: 10px;"><a href="/" style="color: #dc3545; text-decoration: none;">❌ {{ traducoes('btn_clear') }}</a></p>
+    {% endif %}
+</div>
+
+<h2 style="text-align: center; color: #333;">{{ traducoes('feed_title') }}</h2>
+
+<div class="grid-container">
+    {% for memoria in memorias %}
+    <div class="card" id="card-{{ memoria.id }}">
+        
+        <div class="media-area">
+            {% if memoria.ficheiro %}
+                {% if memoria.tipo == 'video' %}
+                    <div class="video-wrapper" id="wrapper-{{ memoria.id }}">
+                        <video class="main-video" id="vid-{{ memoria.id }}" 
+                               src="{{ url_for('static', filename='uploads/' + memoria.ficheiro) }}"
+                               onclick="togglePlay('{{ memoria.id }}')"
+                               ontimeupdate="atualizarBarra('{{ memoria.id }}')"></video>
+                        <div class="custom-controls">
+                            <button class="btn-icon" id="btn-play-{{ memoria.id }}" onclick="togglePlay('{{ memoria.id }}')">
+                                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </button>
+                            <div class="progress-bar-area" id="bar-{{ memoria.id }}"
+                                 onmousemove="verPreview(event, '{{ memoria.id }}')"
+                                 onmouseleave="pararPreview('{{ memoria.id }}')"
+                                 onclick="saltarVideo(event, '{{ memoria.id }}')">
+                                <div class="progress-filled" id="fill-{{ memoria.id }}"></div>
+                                <video class="ghost-video" id="ghost-{{ memoria.id }}" muted preload="auto"
+                                       src="{{ url_for('static', filename='uploads/' + memoria.ficheiro) }}"></video>
+                            </div>
+                            <button class="btn-icon" id="btn-mute-{{ memoria.id }}" onclick="toggleMute('{{ memoria.id }}')">
+                                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                            </button>
+                            <button class="btn-icon" onclick="toggleFullScreen('{{ memoria.id }}')">
+                                <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                {% elif memoria.tipo == 'audio' %}
+                    <div style="height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #ddd;">
+                        <audio controls style="width: 90%;">
+                            <source src="{{ url_for('static', filename='uploads/' + memoria.ficheiro) }}">
+                        </audio>
+                    </div>
+                {% else %}
+                    <img src="{{ url_for('static', filename='uploads/' + memoria.ficheiro) }}" alt="{{ memoria.titulo }}"
+                         style="width: 100%; height: 250px; object-fit: cover;">
+                {% endif %}
+            {% else %}
+                <div style="height: 200px; background: #eee; display:flex; align-items:center; justify-content:center;">
+                    {{ traducoes('no_media') }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="card-body">
+            <h3>{{ memoria.titulo }}</h3>
+            <p>{{ memoria.descricao }}</p>
+            {% if memoria.lat and memoria.lon %}
+                <small style="color: #555;">📍 {{ memoria.lat }}, {{ memoria.lon }}</small>
+            {% endif %}
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <a href="{{ url_for('editar', id_memoria=memoria.id) }}" class="btn-editar">{{ traducoes('edit') }}</a>
+                
+                <button class="btn-apagar" onclick="apagarMemoria('{{ memoria.id }}')">
+                    {{ traducoes('delete') }}
+                </button>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <p style="text-align: center; grid-column: 1/-1;">{{ traducoes('no_memories_found') }}</p>
+    {% endfor %}
+</div>
+
+<div id="map" style="height: 400px; width: 100%; margin-top: 40px; border-radius: 10px; border: 2px solid #ddd;"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // iniciar mapa
+    var map = L.map('map').setView([39.5, -8.0], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OpenStreetMap' }).addTo(map);
+    var dados = {{ memorias | tojson }};
+    for(var i = 0; i < dados.length; i++) {
+        var m = dados[i];
+        if(m.lat && m.lon) {
+            L.marker([m.lat, m.lon]).addTo(map).bindPopup("<b>" + m.titulo + "</b><br>" + m.descricao);
+        }
+    }
+
+    // apagar com ajax e mensagem traduzida
+    function apagarMemoria(id) {
+        var msg = "{{ traducoes('confirm_delete') }}";
+        
+        if(!confirm(msg)) return;
+
+        fetch('/apagar/' + id, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                var card = document.getElementById('card-' + id);
+                if(card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => card.remove(), 500);
+                }
+            } else {
+                alert("{{ traducoes('error_delete') }}");
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    // funcoes video svg
+    const iconPlay = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    const iconPause = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    const iconVolHigh = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+    const iconVolMute = '<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>';
+
+    function togglePlay(id) {
+        var video = document.getElementById('vid-' + id);
+        var btn = document.getElementById('btn-play-' + id);
+        if (video.paused) { video.play(); btn.innerHTML = iconPause; } 
+        else { video.pause(); btn.innerHTML = iconPlay; }
+    }
+    function toggleMute(id) {
+        var video = document.getElementById('vid-' + id);
+        var btn = document.getElementById('btn-mute-' + id);
+        video.muted = !video.muted;
+        if (video.muted) btn.innerHTML = iconVolMute;
+        else btn.innerHTML = iconVolHigh;
+    }
+    function toggleFullScreen(id) {
+        var wrapper = document.getElementById('wrapper-' + id);
+        if (!document.fullscreenElement) {
+            if(wrapper.requestFullscreen) wrapper.requestFullscreen();
+            else if(wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
+        } else { if(document.exitFullscreen) document.exitFullscreen(); }
+    }
+    function atualizarBarra(id) {
+        var video = document.getElementById('vid-' + id);
+        var fill = document.getElementById('fill-' + id);
+        if(video.duration) {
+            var pc = (video.currentTime / video.duration) * 100;
+            fill.style.width = pc + '%';
+        }
+    }
+    function saltarVideo(e, id) {
+        var video = document.getElementById('vid-' + id);
+        var bar = document.getElementById('bar-' + id);
+        var rect = bar.getBoundingClientRect();
+        var pos = (e.clientX - rect.left) / rect.width;
+        video.currentTime = pos * video.duration;
+    }
+    function verPreview(e, id) {
+        var main = document.getElementById('vid-' + id);
+        var ghost = document.getElementById('ghost-' + id);
+        var bar = document.getElementById('bar-' + id);
+        if(main && ghost && main.duration) {
+            ghost.style.display = 'block';
+            var rect = bar.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var width = rect.width;
+            var pc = x / width;
+            if(pc < 0) pc = 0; if(pc > 1) pc = 1;
+            ghost.currentTime = pc * main.duration;
+            var posLeft = x - 50;
+            if (posLeft < 0) posLeft = 0;
+            if (posLeft > width - 100) posLeft = width - 100;
+            ghost.style.left = posLeft + 'px'; 
+        }
+    }
+    function pararPreview(id) {
+        var ghost = document.getElementById('ghost-' + id);
+        if(ghost) ghost.style.display = 'none';
+    }
+</script>
+{% endblock %}

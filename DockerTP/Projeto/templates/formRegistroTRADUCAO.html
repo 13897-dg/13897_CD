@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ traducoes('register') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/estilo.css') }}">
+</head>
+<body style="background-color: #eee;">
+    <div class="container" style="max-width: 400px; margin-top: 100px;">
+        <h2 style="text-align: center;">{{ traducoes('register') }}</h2>
+        <form action="/registo" method="POST">
+            <label>{{ traducoes('email') }}:</label>
+            <input type="text" name="email" required>
+
+            <label>{{ traducoes('password') }}:</label>
+            <input type="password" name="password" required>
+
+            <button type="submit">{{ traducoes('register') }}</button>
+        </form>
+        <p style="text-align: center; margin-top: 15px;">
+            <a href="{{ url_for('login') }}">{{ traducoes('back_to_login') }}</a>
+        </p>
+    </div>
+</body>
+</html>

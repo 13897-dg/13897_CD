@@ -1,0 +1,14 @@
+# Lixo e Cache do Python
+__pycache__/
+*.pyc
+
+# O nosso Cofre de Dados (NUNCA enviar para o GitHub)
+dados_privados/
+private/
+
+# Ficheiros de Upload dos utilizadores
+static/uploads/
+
+# Ficheiros de sistema (Mac/Windows)
+.DS_Store
+Thumbs.db

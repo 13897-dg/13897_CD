@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ traducoes('login') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/estilo.css') }}">
+</head>
+<body style="background-color: #eee;">
+    <div style="text-align: right; padding: 20px;">
+        <a href="{{ url_for('change_language', lang='pt') }}" style="display: inline-block; padding: 10px 15px; background-color: #0056b3; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">pt/PT</a>
+        <span style="margin: 0 10px;">|</span>
+        <a href="{{ url_for('change_language', lang='en') }}" style="display: inline-block; padding: 10px 15px; background-color: #0056b3; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">gb/EN</a>
+    </div>
+    <div class="container" style="max-width: 400px; margin-top: 100px;">
+        <h2 style="text-align: center;">{{ traducoes('login') }}</h2>
+        <form action="/login" method="POST">
+            <label>{{ traducoes('email') }}:</label>
+            <input type="text" name="email" required>
+            
+            <label>{{ traducoes('password') }}:</label>
+            <input type="password" name="password" required>
+
+            <button type="submit">{{ traducoes('login') }}</button>
+        </form>
+        <p style="text-align: center; margin-top: 15px;">
+            {{ traducoes('no_account') }} <a href="{{ url_for('registo') }}">{{ traducoes('register') }}</a>
+        </p>
+    </div>
+</body>
+</html>
