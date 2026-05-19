@@ -13,15 +13,15 @@ def iniciar_servidor():
     host = '0.0.0.0'
     port = 8000
 
-    # Inicializa o socket TCP
+    # Inicializa o socket
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Permite reutilizar a porta imediatamente após restart
+    # Permite reutilizar a porta imediatamente
     servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     servidor.bind((host, port))
     servidor.listen(5) 
     
-    print(f"[*] Servidor de Dados TCP a escutar na porta {port}...")
+    print(f"Servidor de Dados TCP na porta {port}...")
 
     while True:
         cliente, endereco = servidor.accept()
@@ -59,7 +59,7 @@ def iniciar_servidor():
                 cliente.sendall("SUCESSO".encode('utf-8'))
 
         except Exception as e:
-            print(f"[-] Erro interno no DataServer: {e}")
+            print(f"Erro interno no DataServer: {e}")
             cliente.sendall("ERRO".encode('utf-8'))
         
         finally:

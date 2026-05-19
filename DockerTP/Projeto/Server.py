@@ -140,7 +140,7 @@ def aguardar_servidor_dados():
             s.close()
             time.sleep(3) # Espera 3 segundos antes de tentar de novo
             
-    print("[!] O servidor_dados não acordou a tempo. A arrancar a Web na mesma (com aviso).")
+    print("O servidor_dados não acordou a tempo. A arrancar a Web na mesma (com aviso).")
     return False
 
 # --- rotas ---
