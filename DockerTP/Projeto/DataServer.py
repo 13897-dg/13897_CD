@@ -17,13 +17,14 @@ def iniciar_servidor():
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Permite reutilizar a porta imediatamente
     servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    
+    # liga o socket a porta escolhida e limita a 5 pedidops
     servidor.bind((host, port))
     servidor.listen(5) 
     
     print(f"Servidor de Dados TCP na porta {port}...")
 
     while True:
+        # espera pelo cliente
         cliente, endereco = servidor.accept()
         
         try:
