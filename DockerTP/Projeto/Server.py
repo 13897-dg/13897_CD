@@ -75,7 +75,7 @@ def load_data(filename):
         texto = resposta_bytes.decode('utf-8')
         return json.loads(texto)
         
-    except (socket.timeout, ConnectionRefusedError):
+    except (socket.timeout, ConnectionRefusedError, socket.gaierror):
         print("ERRO: Contentor de Dados offline (Socket).")
         return None # Mantemos o None para o nosso sistema de erro de Login funcionar!
     except Exception as e:
