@@ -1,15 +1,56 @@
 version: '3.8'
 
 services:
-  servidor_web:
+  # Contentor 1: Backend Web (Acessível pelo browser)
+  web_app:
     build: .
-    container_name: web_app
+    container_name: contentor_web
     ports:
-      - "5000:5000" 
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+    networks:
+      - rede-publica
     depends_on:
-      - servidor_dados
+      - api_server
 
-  servidor_dados:
-    build: .
-    container_name: data_app
-    command: python DataServer.py
+  # Contentor 2: API REST (O intermediário)
+  api_server:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: api_rest
+    environment:
+      - DB_HOST=base_dados
+      - DB_USER=david
+      - DB_PASSWORD=secreto
+      - DB_NAME=memorias_db
+    networks:
+      - rede-publica
+      - rede-privada
+    depends_on:
+      - base_dados
+
+  # Contentor 3: A Base de Dados Real (Totalmente isolada)
+  base_dados:
+    image: postgres:15-alpine
+    container_name: base_dados
+    environment:
+      POSTGRES_USER: david
+      POSTGRES_PASSWORD: secreto
+      POSTGRES_DB: memorias_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rede-privada
+
+networks:
+  rede-publica:
+    driver: bridge
+  rede-privada:
+    driver: bridge
+
+volumes:
+  postgres_data:
