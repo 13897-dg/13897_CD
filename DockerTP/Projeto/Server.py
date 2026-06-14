@@ -2,7 +2,9 @@ import os
 import json
 import uuid
 import time
-import requests # <-- O GRANDE REGRESSO DO HTTP!
+import threading
+import paho.mqtt.client as mqtt
+import requests
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
 
@@ -23,6 +25,35 @@ if not os.path.exists(app.config["UPLOAD_FOLDER"]):
 
 # O Endereço da nossa nova API REST
 API_URL = "http://api_rest:8000/api"
+
+# Variável global para guardar os últimos dados do clima recebidos
+clima_atual = {"temperature": "--", "humidity": "--"}
+
+def on_connect(client, userdata, flags, reason_code, properties=None):
+    print("[*] Ligado ao MQTT do Professor!")
+    # Subscrevemos o tópico do clima
+    client.subscribe("/weather")
+
+def on_message(client, userdata, msg):
+    global clima_atual
+    try:
+        # O professor envia um JSON como payload
+        dados = json.loads(msg.payload.decode('utf-8'))
+        clima_atual["temperature"] = dados.get("temperature", "--")
+        clima_atual["humidity"] = dados.get("humidity", "--")
+    except Exception as e:
+        pass
+
+def iniciar_mqtt():
+    cliente = mqtt.Client()
+    cliente.on_connect = on_connect
+    cliente.on_message = on_message
+    try:
+        # Ligação à porta 1883 do laboratório
+        cliente.connect("cjsg.ddns.net", 1883, 60)
+        cliente.loop_start() # Corre em segundo plano (background thread)
+    except Exception as e:
+        print(f"Erro ao ligar ao MQTT: {e}")
 
 # --- SISTEMA DE TRADUÇÕES (Mantém-se igual) ---
 def carregar_traducoes():
@@ -130,24 +161,19 @@ def index():
 
 @app.route("/dashboard")
 def dashboard():
-    # Segurança normal: só entra quem tem login feito
     if not session.get("user"): return redirect(url_for("login"))
 
     dados_tomada = {}
-
     try:
         url_tomada = "https://cjsg.ddns.net:8443/socket/values"
-
         resposta = requests.get(url_tomada, timeout=5, verify=False)
-
         if resposta.status_code == 200:
             dados_tomada = resposta.json()
+    except:
+        pass
 
-    except Exception as e:
-        print(f"Erro ao espiar a Tomada do Professor: {e}")
-
-    # Enviamos os dados da tomada para a nossa nova página
-    return render_template("dashboard.html", socket=dados_tomada)
+    # Agora enviamos o socket (REST) E o clima (MQTT) para a página
+    return render_template("dashboard.html", socket=dados_tomada, clima=clima_atual)
 
 @app.route("/adicionar", methods=["GET", "POST"])
 def adicionar():
@@ -209,4 +235,5 @@ def apagar(id_memoria):
 
 if __name__ == "__main__":
     aguardar_api()
+    iniciar_mqtt()
     app.run(host="0.0.0.0", port=5000, debug=True)

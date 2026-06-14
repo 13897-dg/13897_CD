@@ -33,9 +33,14 @@
         <h2>Estação Meteorológica</h2>
         <p>Ligação: <strong>MQTT (Tempo Real)</strong></p>
         <hr>
-        <p>Temperatura: <span id="temp">A aguardar...</span> °C</p>
-        <p>Humidade: <span id="hum">A aguardar...</span> %</p>
+        <p>Temperatura: <span>{{ clima.temperature }}</span> °C</p>
+        <p>Humidade: <span>{{ clima.humidity }}</span> %</p>
     </div>
 </div>
+    <script>
+        setInterval(function() {
+            window.location.reload();
+        }, 10000); // 10000 milissegundos = 10 segundos
+    </script>
 </body>
 </html>
