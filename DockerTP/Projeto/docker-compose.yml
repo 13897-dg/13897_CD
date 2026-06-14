@@ -45,6 +45,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - rede-privada
+    # O nosso laboratório de visualização
+  grafana:
+    image: grafana/grafana-enterprise:latest
+    container_name: grafana_lab
+    ports:
+      - "3000:3000"
+    networks:
+      - rede-publica
+      - rede-privada
+    depends_on:
+      - base_dados
 
 networks:
   rede-publica:
