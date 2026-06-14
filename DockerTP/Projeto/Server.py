@@ -128,6 +128,27 @@ def index():
 
     return render_template("index.html", memorias=minhas, query=query)
 
+@app.route("/dashboard")
+def dashboard():
+    # Segurança normal: só entra quem tem login feito
+    if not session.get("user"): return redirect(url_for("login"))
+
+    dados_tomada = {}
+
+    try:
+        url_tomada = "https://cjsg.ddns.net:8443/socket/values"
+
+        resposta = requests.get(url_tomada, timeout=5, verify=False)
+
+        if resposta.status_code == 200:
+            dados_tomada = resposta.json()
+
+    except Exception as e:
+        print(f"Erro ao espiar a Tomada do Professor: {e}")
+
+    # Enviamos os dados da tomada para a nossa nova página
+    return render_template("dashboard.html", socket=dados_tomada)
+
 @app.route("/adicionar", methods=["GET", "POST"])
 def adicionar():
     if not session.get("user"): return redirect(url_for("login"))
