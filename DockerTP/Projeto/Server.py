@@ -26,21 +26,34 @@ if not os.path.exists(app.config["UPLOAD_FOLDER"]):
 # O Endereço da nossa nova API REST
 API_URL = "http://api_rest:8000/api"
 
-# Variável global para guardar os últimos dados do clima recebidos
-clima_atual = {"temperature": "--", "humidity": "--"}
+clima_mqtt = {"temperature": "--", "humidity": "--", "latitude": "--", "longitude": "--"}
+socket_mqtt = {"voltage": "--", "power": "--", "frequency": "--", "latitude": "--", "longitude": "--"}
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
     print("[*] Ligado ao MQTT do Professor!")
-    # Subscrevemos o tópico do clima
+    # Subscrevemos os DOIS tópicos (ver página 26 do guião)
     client.subscribe("/weather")
+    client.subscribe("/power")
 
 def on_message(client, userdata, msg):
-    global clima_atual
+    global clima_mqtt, socket_mqtt
     try:
-        # O professor envia um JSON como payload
         dados = json.loads(msg.payload.decode('utf-8'))
-        clima_atual["temperature"] = dados.get("temperature", "--")
-        clima_atual["humidity"] = dados.get("humidity", "--")
+
+        # Se a mensagem vier do tópico do Clima
+        if msg.topic == "/weather":
+            clima_mqtt["temperature"] = dados.get("temperature", "--")
+            clima_mqtt["humidity"] = dados.get("humidity", "--")
+            clima_mqtt["latitude"] = dados.get("latitude", "40.2")
+            clima_mqtt["longitude"] = dados.get("longitude", "-8.4")
+
+        # Se a mensagem vier do tópico da Tomada (/power)
+        elif msg.topic == "/power":
+            socket_mqtt["voltage"] = dados.get("voltage", "--")
+            socket_mqtt["power"] = dados.get("power", "--")
+            socket_mqtt["frequency"] = dados.get("frequency", "--")
+            socket_mqtt["latitude"] = dados.get("latitude", "40.2")
+            socket_mqtt["longitude"] = dados.get("longitude", "-8.4")
     except Exception as e:
         pass
 
@@ -164,17 +177,31 @@ def index():
 def dashboard():
     if not session.get("user"): return redirect(url_for("login"))
 
-    dados_tomada = {}
-    try:
-        url_tomada = "https://cjsg.ddns.net:8443/socket/values"
-        resposta = requests.get(url_tomada, timeout=5, verify=False)
-        if resposta.status_code == 200:
-            dados_tomada = resposta.json()
-    except:
-        pass
+    dados_socket_rest = {}
+    dados_clima_rest = {}
 
-    # Agora enviamos o socket (REST) E o clima (MQTT) para a página
-    return render_template("dashboard.html", socket=dados_tomada, clima=clima_atual)
+    # 1. Pedido REST à Tomada Inteligente
+    try:
+        resp_socket = requests.get("https://cjsg.ddns.net:8443/socket/values", timeout=5, verify=False)
+        if resp_socket.status_code == 200:
+            dados_socket_rest = resp_socket.json()
+    except Exception as e:
+        print(f"Erro REST Socket: {e}")
+
+    # 2. Pedido REST à Estação Meteorológica
+    try:
+        resp_clima = requests.get("https://cjsg.ddns.net:8443/weather/values", timeout=5, verify=False)
+        if resp_clima.status_code == 200:
+            dados_clima_rest = resp_clima.json()
+    except Exception as e:
+        print(f"Erro REST Clima: {e}")
+
+    # Enviamos os 4 pacotes de dados para o HTML!
+    return render_template("dashboard.html",
+                           socket_rest=dados_socket_rest,
+                           socket_mqtt=socket_mqtt,
+                           clima_rest=dados_clima_rest,
+                           clima_mqtt=clima_mqtt)
 
 @app.route("/adicionar", methods=["GET", "POST"])
 def adicionar():

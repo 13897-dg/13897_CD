@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # O Sistema de Backend (Acesso pela Web)
+  web_app:
+    build: .
+    container_name: web_app
+    ports:
+      - "5000:5000" # A ÚNICA porta exposta para o teu PC
+    networks:
+      - rede-sockets
+    depends_on:
+      - data_app
+
+  # O Sistema de Gestão de Dados (Trancado na rede privada)
+  data_app:
+    build: .
+    # Forçamos o Docker a arrancar o DataServer.py neste contentor
+    command: python DataServer.py
+    container_name: data_app
+    networks:
+      - rede-sockets
+    # NÃO tem secção "ports". O teu computador não lhe chega, só a web_app!
+
+networks:
+  rede-sockets:
+    driver: bridge

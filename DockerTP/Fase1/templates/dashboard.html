@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard IoT</title>
+    <style>
+        .grid { display: flex; gap: 20px; padding: 20px; }
+        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; width: 300px; }
+        .on { color: green; font-weight: bold; }
+        .off { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+<h1>Painel de Controlo IoT</h1>
+<a href="/">Voltar às Memórias</a>
+
+<div class="grid">
+    <div class="card">
+        <h2>Tomada Inteligente</h2>
+        <p>Ligação: <strong>REST (Backend)</strong></p>
+        <hr>
+
+        {% if socket %}
+        <p>Voltagem: {{ socket.voltage }} V</p>
+        <p>Frequência: {{ socket.frequency }} Hz</p>
+        <p>Potência: {{ socket.power }} W</p>
+        {% else %}
+        <p class="off">Sem ligação ao laboratório.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Estação Meteorológica</h2>
+        <p>Ligação: <strong>MQTT (Tempo Real)</strong></p>
+        <hr>
+        <p>Temperatura: <span>{{ clima.temperature }}</span> °C</p>
+        <p>Humidade: <span>{{ clima.humidity }}</span> %</p>
+    </div>
+</div>
+    <script>
+        setInterval(function() {
+            window.location.reload();
+        }, 10000); // 10000 milissegundos = 10 segundos
+    </script>
+</body>
+</html>

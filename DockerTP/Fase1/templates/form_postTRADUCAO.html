@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="form-box">
+    <h2>{{ traducoes('edit_trip') if memoria else traducoes('new_trip') }}</h2>
+    
+    <form action="{{ url_for('editar', id_memoria=memoria.id) if memoria else url_for('adicionar') }}" 
+          method="POST" enctype="multipart/form-data">
+        
+        <label>{{ traducoes('title') }}</label>
+        <input type="text" name="titulo" value="{{ memoria.titulo if memoria else '' }}" required>
+
+        <label>{{ traducoes('description') }}</label>
+        <textarea name="descricao" rows="4">{{ memoria.descricao if memoria else '' }}</textarea>
+
+        <label>{{ traducoes('memory_type') }}:</label>
+        <select name="tipo">
+            <option value="imagem" {{ 'selected' if memoria and memoria.tipo == 'imagem' else '' }}>{{ traducoes('photo') }}</option>
+            <option value="video" {{ 'selected' if memoria and memoria.tipo == 'video' else '' }}>{{ traducoes('video') }}</option>
+        </select>
+
+        <label>{{ traducoes('file') }}:</label>
+        {% if memoria and memoria.ficheiro %}
+            <p style="font-size: 0.8em; color: #666;">{{ traducoes('current_file') }}: {{ memoria.ficheiro }} ({{ traducoes('ignore_to_keep') }})</p>
+        {% endif %}        
+        <div class="file-input-wrapper">
+            <input type="file" id="ficheiro-input" name="ficheiro" accept="image/*,video/*" {{ '' if memoria else 'required' }}>
+            <label for="ficheiro-input" class="file-input-label">
+                <span class="file-input-text">{{ traducoes('choose_file') }}</span>
+            </label>
+            <span class="file-name" id="file-text">{{ traducoes('no_file_selected') }}</span>
+        </div>
+
+        <hr>
+        <h3>{{ traducoes('location') }}</h3>
+        <label>{{ traducoes('latitude') }}:</label>
+        <input type="text" name="latitude" placeholder="Ex: 38.71" value="{{ memoria.lat if memoria else '' }}" required>
+
+        <label>{{ traducoes('longitude') }}:</label>
+        <input type="text" name="longitude" placeholder="Ex: -9.13" value="{{ memoria.lon if memoria else '' }}" required>
+
+        <button type="submit" style="margin-top: 15px;">{{ traducoes('save') }}</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('ficheiro-input').addEventListener('change', function() {
+        const fileText = document.getElementById('file-text');
+        if (this.files.length > 0) {
+            fileText.textContent = this.files[0].name;
+        } else {
+            fileText.textContent = '{{ traducoes("no_file_selected") }}';
+        }
+    });
+</script>
+{% endblock %}

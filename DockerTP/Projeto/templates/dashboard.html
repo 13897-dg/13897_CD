@@ -2,45 +2,137 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard IoT</title>
+    <title>Dashboard IoT - Redundância</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <style>
-        .grid { display: flex; gap: 20px; padding: 20px; }
-        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; width: 300px; }
-        .on { color: green; font-weight: bold; }
-        .off { color: red; font-weight: bold; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        .grid { display: flex; gap: 15px; padding-top: 20px; flex-wrap: wrap; }
+        .card { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px; flex: 1; min-width: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .on { color: green; font-weight: bold; margin: 5px 0; }
+        .off { color: red; font-weight: bold; margin: 5px 0; }
+        hr { border: 0; border-top: 1px solid #eee; }
+
+        /* Caixa do Mapa */
+        #map { height: 450px; width: 100%; border-radius: 8px; margin-top: 25px; border: 1px solid #ccc; z-index: 1; }
     </style>
 </head>
 <body>
-<h1>Painel de Controlo IoT</h1>
-<a href="/">Voltar às Memórias</a>
+
+<div class="header">
+    <h1>Painel de Controlo IoT (Fase 3)</h1>
+    <a href="/" class="btn">Voltar às Memórias</a>
+</div>
 
 <div class="grid">
     <div class="card">
-        <h2>Tomada Inteligente</h2>
-        <p>Ligação: <strong>REST (Backend)</strong></p>
+        <h3>⚡ Tomada (REST)</h3>
         <hr>
-
-        {% if socket %}
-        <p>Voltagem: {{ socket.voltage }} V</p>
-        <p>Frequência: {{ socket.frequency }} Hz</p>
-        <p>Potência: {{ socket.power }} W</p>
+        {% if socket_rest and socket_rest.voltage %}
+        <p class="on">● Online (HTTP)</p>
+        <p>Voltagem: <strong>{{ socket_rest.voltage }} V</strong></p>
+        <p>Potência: <strong>{{ socket_rest.power }} W</strong></p>
         {% else %}
-        <p class="off">Sem ligação ao laboratório.</p>
+        <p class="off">○ Falha / Offline</p>
         {% endif %}
     </div>
 
     <div class="card">
-        <h2>Estação Meteorológica</h2>
-        <p>Ligação: <strong>MQTT (Tempo Real)</strong></p>
+        <h3>⚡ Tomada (MQTT)</h3>
         <hr>
-        <p>Temperatura: <span>{{ clima.temperature }}</span> °C</p>
-        <p>Humidade: <span>{{ clima.humidity }}</span> %</p>
+        {% if socket_mqtt and socket_mqtt.voltage != "--" %}
+        <p class="on">● Online (Broker)</p>
+        <p>Voltagem: <strong>{{ socket_mqtt.voltage }} V</strong></p>
+        <p>Potência: <strong>{{ socket_mqtt.power }} W</strong></p>
+        {% else %}
+        <p class="off">○ À espera de dados...</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>🌤️ Clima (REST)</h3>
+        <hr>
+        {% if clima_rest and clima_rest.temperature %}
+        <p class="on">● Online (HTTP)</p>
+        <p>Temp: <strong>{{ clima_rest.temperature }} °C</strong></p>
+        <p>Humidade: <strong>{{ clima_rest.humidity }} %</strong></p>
+        {% else %}
+        <p class="off">○ Falha / Offline</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>🌤️ Clima (MQTT)</h3>
+        <hr>
+        {% if clima_mqtt and clima_mqtt.temperature != "--" %}
+        <p class="on">● Online (Broker)</p>
+        <p>Temp: <strong>{{ clima_mqtt.temperature }} °C</strong></p>
+        <p>Humidade: <strong>{{ clima_mqtt.humidity }} %</strong></p>
+        {% else %}
+        <p class="off">○ À espera de dados...</p>
+        {% endif %}
     </div>
 </div>
-    <script>
-        setInterval(function() {
-            window.location.reload();
-        }, 10000); // 10000 milissegundos = 10 segundos
-    </script>
+
+<h2>📍 Monitorização Geográfica dos Sensores</h2>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // 1. Atualização automática obrigatória (10 segundos)
+    setTimeout(function() {
+        window.location.reload();
+    }, 10000);
+
+    // 2. Inicializar o mapa centrado em Portugal
+    var map = L.map('map').setView([39.5, -8.0], 7);
+
+    // 3. Adicionar a camada gráfica do OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // --- COLOCAÇÃO DE PINS AUTOMÁTICA ---
+
+    // Marcador da Estação Meteorológica (Tenta MQTT, se falhar tenta REST)
+    var latClima = null, lonClima = null;
+    {% if clima_mqtt and clima_mqtt.latitude != "--" %}
+        latClima = parseFloat("{{ clima_mqtt.latitude }}");
+        lonClima = parseFloat("{{ clima_mqtt.longitude }}");
+    {% elif clima_rest and clima_rest.latitude %}
+        latClima = parseFloat("{{ clima_rest.latitude }}");
+        lonClima = parseFloat("{{ clima_rest.longitude }}");
+    {% endif %}
+
+    if (latClima && lonClima) {
+            var pinClima = L.marker([latClima, lonClima]).addTo(map);
+            var infoClima = "<b>🌤️ Estação Meteorológica</b><br>" +
+                            "Temp: {{ clima_mqtt.temperature if clima_mqtt.temperature != '--' else clima_rest.temperature }} °C<br>" +
+                            "Humidade: {{ clima_mqtt.humidity if clima_mqtt.humidity != '--' else clima_rest.humidity }} %";
+            pinClima.bindPopup(infoClima);
+        }
+
+    // Marcador da Tomada Inteligente (Tenta MQTT, se falhar tenta REST)
+    var latTomada = null, lonTomada = null;
+    {% if socket_mqtt and socket_mqtt.latitude != "--" %}
+        latTomada = parseFloat("{{ socket_mqtt.latitude }}");
+        lonTomada = parseFloat("{{ socket_mqtt.longitude }}");
+    {% elif socket_rest and socket_rest.latitude %}
+        latTomada = parseFloat("{{ socket_rest.latitude }}");
+        lonTomada = parseFloat("{{ socket_rest.longitude }}");
+    {% endif %}
+
+    if (latTomada && lonTomada) {
+            var pinTomada = L.marker([latTomada, lonTomada]).addTo(map);
+            var infoTomada = "<b>⚡ Tomada Inteligente</b><br>" +
+                             "Voltagem: {{ socket_mqtt.voltage if socket_mqtt.voltage != '--' else socket_rest.voltage }} V<br>" +
+                             "Potência: {{ socket_mqtt.power if socket_mqtt.power != '--' else socket_rest.power }} W";
+            pinTomada.bindPopup(infoTomada);
+        }
+</script>
 </body>
 </html>

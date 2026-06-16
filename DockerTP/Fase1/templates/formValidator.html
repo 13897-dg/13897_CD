@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="form-box">
+    <h2>Nova Memória</h2>
+    
+    <form name="FormMemoria" action="{{ url_for('adicionar') }}" 
+          method="POST" enctype="multipart/form-data" 
+          onsubmit="return ValidarFormulario()">
+        
+        <label>Título:</label>
+        <input type="text" name="titulo">
+
+        <label>Descrição:</label>
+        <textarea name="descricao" rows="4"></textarea>
+
+        <label>Tipo:</label>
+        <select name="tipo" id="tipoMedia">
+            <option value="imagem">Fotografia</option>
+            <option value="video">Vídeo</option>
+            <option value="audio">Áudio</option>
+        </select>
+
+        <label>Ficheiro:</label>
+        <input type="file" name="ficheiro" id="ficheiroInput">
+
+        <hr>
+        <h3>Localização</h3>
+        <label>Latitude:</label>
+        <input type="text" name="latitude" placeholder="Ex: 38.71">
+        
+        <label>Longitude:</label>
+        <input type="text" name="longitude" placeholder="Ex: -9.13">
+
+        <button type="submit">Guardar</button>
+    </form>
+</div>
+
+<script type="text/javascript">
+    function ValidarFormulario() {
+        // Aceder ao formulário
+        var theForm = document.forms["FormMemoria"];
+        
+        // 1. Validar Título
+        if (theForm.titulo.value == "") {
+            alert("Por favor, preencha o título.");
+            theForm.titulo.focus();
+            return false;
+        }
+
+        // 2. Validar Ficheiro Obrigatório
+        if (theForm.ficheiro.value == "") {
+            alert("Tem de escolher um ficheiro (Imagem, Vídeo ou Áudio).");
+            return false;
+        }
+
+        // 3. Validar Extensão do Ficheiro vs Tipo
+        var tipo = document.getElementById("tipoMedia").value;
+        var nomeFicheiro = theForm.ficheiro.value.toLowerCase();
+        
+        // Verificação simples com indexOf (método básico de strings)
+        if (tipo == "imagem") {
+            if (nomeFicheiro.indexOf(".jpg") == -1 && nomeFicheiro.indexOf(".png") == -1) {
+                alert("Para 'Fotografia', escolha um ficheiro .jpg ou .png");
+                return false;
+            }
+        }
+        else if (tipo == "video") {
+            if (nomeFicheiro.indexOf(".mp4") == -1) {
+                alert("Para 'Vídeo', escolha um ficheiro .mp4");
+                return false;
+            }
+        }
+        else if (tipo == "audio") {
+            if (nomeFicheiro.indexOf(".mp3") == -1 && nomeFicheiro.indexOf(".wav") == -1) {
+                alert("Para 'Áudio', escolha um ficheiro .mp3 ou .wav");
+                return false;
+            }
+        }
+
+        return true;
+    }
+</script>
+{% endblock %}

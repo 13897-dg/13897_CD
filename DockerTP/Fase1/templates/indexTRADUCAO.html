@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>{{ traducoes('my_memories') }}</h2>
+
+<div class="grid-container">
+    {% for memoria in memorias %}
+    <div class="card">
+        
+        {% if memoria.ficheiro %}
+            {% if memoria.tipo == 'video' %}
+                <video controls>
+                    <source src="{{ url_for('static', filename='uploads/' + memoria.ficheiro) }}">
+                    {{ traducoes('video_not_supported') }}
+                </video>
+            {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + memoria.ficheiro) }}" alt="{{ memoria.titulo }}">
+            {% endif %}
+        {% else %}
+            <div style="height: 200px; background: #eee; display: flex; align-items: center; justify-content: center; color: #888;">
+                {{ traducoes('no_media') }}
+            </div>
+        {% endif %}
+
+        <div class="card-body">
+            <h3>{{ memoria.titulo }}</h3>
+            <p>{{ memoria.descricao }}</p>
+            
+            {% if memoria.lat and memoria.lon %}
+                <small style="color: #555; display: block; margin-bottom: 10px;">
+                    📍 {{ memoria.lat }}, {{ memoria.lon }}
+                </small>
+            {% endif %}
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <a href="{{ url_for('editar', id_memoria=memoria.id) }}" class="btn-editar">{{ traducoes('edit') }}</a>
+                <a href="{{ url_for('apagar', id_memoria=memoria.id) }}" class="btn-apagar">{{ traducoes('delete') }}</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <p>{{ traducoes('no_memories_yet') }}</p>
+    {% endfor %}
+</div>
+
+<div id="map" style="height: 400px; width: 100%; margin-top: 40px; border-radius: 10px; border: 2px solid #ddd;"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var map = L.map('map').setView([39.5, -8.0], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'OpenStreetMap'
+    }).addTo(map);
+
+    var dados = {{ memorias | tojson }};
+
+    dados.forEach(function(m) {
+        if(m.lat && m.lon) {
+            var conteudo = "<b>" + m.titulo + "</b><br>" + m.descricao;
+            L.marker([m.lat, m.lon]).addTo(map).bindPopup(conteudo);
+        }
+    });
+</script>
+{% endblock %}
