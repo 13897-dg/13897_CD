@@ -48,10 +48,11 @@ def iniciar_mqtt():
     cliente = mqtt.Client()
     cliente.on_connect = on_connect
     cliente.on_message = on_message
+    cliente.username_pw_set("cd","1qaz\"WSX")
     try:
         # Ligação à porta 1883 do laboratório
         cliente.connect("cjsg.ddns.net", 1883, 60)
-        cliente.loop_start() # Corre em segundo plano (background thread)
+        cliente.loop_start()
     except Exception as e:
         print(f"Erro ao ligar ao MQTT: {e}")
 

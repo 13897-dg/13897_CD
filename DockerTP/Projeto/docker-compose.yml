@@ -33,7 +33,7 @@ services:
     depends_on:
       - base_dados
 
-  # Contentor 3: A Base de Dados Real (Totalmente isolada)
+  # Contentor 3: A Base de Dados Real
   base_dados:
     image: postgres:15-alpine
     container_name: base_dados
