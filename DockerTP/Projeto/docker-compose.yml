@@ -22,6 +22,8 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: api_rest
+    ports:
+      - "8000:8000" # <- PORTA ABERTA PARA ACEDER AO SWAGGER NO BROWSER
     environment:
       - DB_HOST=base_dados
       - DB_USER=david

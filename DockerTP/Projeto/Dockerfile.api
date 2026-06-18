@@ -3,7 +3,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Instala as ferramentas para a API e Base de Dados
-RUN pip install --no-cache-dir flask psycopg2-binary
+RUN pip install --no-cache-dir flask psycopg2-binary flasgger
 
 COPY . /app
 
