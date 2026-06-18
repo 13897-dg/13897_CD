@@ -1,47 +1,61 @@
-# Relatório de Desenvolvimento: Aplicação Web com Arquitetura de Microserviços (Docker & Sockets)
-
-Este documento descreve o desenvolvimento, arquitetura e funcionamento de um projeto baseado em contentores Docker. O projeto implementa uma aplicação Web (Frontend/Gateway) e um servidor de dados (Backend/Base de Dados) que comunicam de forma assíncrona através de sockets TCP.
+# Trabalho Prático: Computação Distribuída
 
 ## 1. Visão Geral do Projeto
-A aplicação consiste num sistema de gestão de "memórias" (conteúdos multimédia associados a localizações geográficas), construído em Python com a framework **Flask**. Para garantir o isolamento e escalabilidade, o sistema foi dividido em dois contentores distintos orquestrados através de **Docker Compose**:
-1. **Servidor Web (`web_app`)**: Gere a interface de utilizador, autenticação, sessões e submissão de ficheiros.
-2. **Servidor de Dados (`data_app`)**: Atua como uma base de dados *NoSQL* baseada em ficheiros JSON, recebendo comandos de leitura e escrita através de Sockets.
 
-## 2. Arquitetura e Contentores (Docker & Docker Compose)
+Este repositório contém o desenvolvimento final do trabalho prático da unidade curricular de Computação Distribuída. O projeto consiste num **Sistema Distribuído em 3 Camadas** para a gestão de conteúdos multimédia e monitorização de sensores IoT.
 
-A infraestrutura é inteiramente gerida pelo `docker-compose.yml`, que define a relação e as portas expostas entre os contentores. Ambos partilham a mesma imagem baseada num único `Dockerfile` (`python:3.10-slim`), mas executam comandos diferentes no arranque.
+O sistema foi desenhado com foco no isolamento de processos, escalabilidade horizontal e interoperabilidade, aplicando as melhores práticas lecionadas:
+* Contentorização do ambiente de execução.
+* Separação lógica entre a camada de apresentação (Web) e a persistência de dados.
+* Implementação de uma arquitetura *Stateless* através de uma API RESTful.
+* Comunicação assíncrona baseada em eventos para o paradigma IoT (MQTT).
 
-### 2.1. Docker Compose
-* **`servidor_dados`**: Arranca correndo o script `DataServer.py` e não expõe portas para a máquina *host*, sendo acessível apenas dentro da rede interna do Docker (garantindo segurança).
-* **`servidor_web`**: Arranca correndo `Server.py`, expõe a porta `5000` para a máquina *host* e tem uma diretiva `depends_on: - servidor_dados`, indicando que o servidor de dados deve iniciar primeiro.
+---
 
-### 2.2. Gestão de Arranque (Handshake)
-Para evitar que o Servidor Web tente aceder ao Servidor de Dados antes de este estar completamente "acordado" e pronto a aceitar ligações, foi implementado um mecanismo de *Handshake* no arranque do `Server.py`:
-* O Servidor Web tenta abrir um socket de teste para a porta do Servidor de Dados repetidamente.
-* Só avança com o arranque da interface Web (porta 5000) depois de receber resposta bem-sucedida do contentor de dados.
+## 2. Arquitetura e Orquestração (Docker)
 
-## 3. Comunicação Interna (Sockets TCP)
+A infraestrutura é gerida pelo ficheiro `docker-compose.yml`, garantindo a instanciação simultânea e isolada dos serviços:
 
-Uma das características principais deste projeto é o abandono de chamadas HTTP/REST convencionais entre a Web e a Base de Dados em prol de **Sockets TCP Puros**.
+1. **`web_app` (Frontend / Gateway):** * **Tecnologia:** Python / Flask
+   * **Função:** Interface do utilizador, gestão de sessões cliente-servidor, consumo da API REST e subscrição de tópicos MQTT.
+   * **Rede:** `rede-publica` (Expõe a porta `5000` para o host).
 
-### 3.1. Protocolo Customizado
-A comunicação é feita através do envio de *strings* formatadas e codificadas em bytes (`utf-8`). Foi criado um protocolo leve com três partes divididas por barras verticais (`|`):
-`COMANDO | NOME_DO_FICHEIRO | DADOS_JSON`
+2. **`api_server` (Web Service REST):** * **Tecnologia:** Python / Flask / psycopg2
+   * **Função:** Intermediário estrito e *stateless* que processa os pedidos HTTP vindos do Frontend, executando a lógica de negócio e as *queries* parametrizadas contra injeção de SQL.
+   * **Redes:** `rede-publica` (para receber os pedidos) e `rede-privada` (para aceder à base de dados).
 
-* **GET**: O Servidor Web envia `GET|users.json`. O Servidor de Dados lê o ficheiro internamente e devolve a totalidade dos dados em formato JSON nativo.
-* **POST**: O Servidor Web transforma os dicionários Python em *strings* JSON e envia, por exemplo, `POST|users.json|[{"email": "...", "password": "..."}]`. O servidor de dados guarda a string num ficheiro físico e responde com `"SUCESSO"`.
+3. **`base_dados` (Persistência):** * **Tecnologia:** PostgreSQL 15 (Alpine)
+   * **Função:** Armazenamento relacional de utilizadores e conteúdos (memórias).
+   * **Rede:** `rede-privada` (Isolamento total. Nenhuma porta é exposta para o exterior, garantindo acesso exclusivo pela API).
 
-### 3.2. Vantagens da Abordagem
-* Comunicação super-rápida, direta na camada de transporte (TCP) sem o *overhead* adicional de cabeçalhos HTTP.
-* Controlo total sobre o *buffer* de dados e gestão de *timeouts* nas operações vitais da aplicação.
+---
 
-## 4. Funcionalidades da Aplicação Web (Flask)
+## 3. Evolução das Fases do Projeto
 
-O contentor do Servidor Web foca-se puramente na lógica de interface e sessão:
-* **Autenticação de Utilizadores**: Registo, Login e Logout geridos com segurança através do `flask_session` (sessões baseadas no sistema de ficheiros e não em *cookies* inseguros).
-* **Gestão de Conteúdos (CRUD)**: Possibilidade de listar, adicionar, editar e apagar memórias (com título, descrição, tipo de local, coordenadas GPS e upload de ficheiro multimédia associado).
-* **Internacionalização (i18n)**: Implementação de um sistema dinâmico de tradução (Português/Inglês) que injeta as variáveis no contexto dos templates Jinja2 e permite a mudança de idioma em tempo real via rotas da sessão.
-* **Processamento de *Uploads***: Ficheiros de imagem ou documentos são guardados na pasta estática do contentor Web, gerando UUIDs únicos para evitar colisões de nomes, e mantendo apenas a referência (nome) na base de dados JSON.
+### Fase 1: Sockets TCP e Heterogeneidade
+* **Implementação inicial:** Comunicação direta entre processos via Sockets (`socket.SOCK_STREAM`) utilizando o protocolo de transporte TCP.
+* **Resolução da Heterogeneidade:** Substituição do envio de estruturas binárias nativas por ficheiros de texto estruturados em **JSON**, garantindo interoperabilidade entre diferentes arquiteturas de hardware e ordenação de bytes (*Big-Endian* vs *Little-Endian*).
 
-## 5. Conclusão
-Este projeto evidencia os fundamentos críticos na construção de sistemas distribuídos modernos: contentorização eficaz para padronização de ambientes de execução, independência de microserviços e comunicação baixo-nível síncrona/assíncrona através da implementação customizada de Sockets entre as pontes do ecossistema.
+### Fase 2: Transição para REST e Base de Dados
+* **Migração:** O antigo servidor de dados baseado em sockets foi substituído por uma **API REST** padronizada.
+* **Comunicação:** O Frontend consome a API através dos métodos HTTP (`GET`, `POST`, `PUT`, `DELETE`).
+* **Estado:** A API foi desenhada para ser totalmente **Stateless**, não retendo informação de sessão, o que facilita o balanceamento de carga. A persistência baseada em ficheiros (`.json`) evoluiu para um SGDB relacional (**PostgreSQL**).
+
+### Fase 3: Dashboard IoT (REST vs MQTT)
+Implementação de um painel de monitorização consumindo dados dos sensores do laboratório através de dois modelos distintos:
+* **Modelo Cliente/Servidor (REST):** Abordagem síncrona, onde a `web_app` utiliza chamadas `GET` aos endpoints de proxy (`/weather/values` e `/socket/values`).
+* **Modelo Publish/Subscribe (MQTT):** Abordagem assíncrona e fracamente acoplada, ideal para IoT. A `web_app` atua como cliente *Subscriber* no broker `cjsg.ddns.net:1883`, atualizando o Dashboard de forma eficiente apenas quando ocorrem novos eventos nos tópicos `/weather` e `/power`.
+
+---
+
+## 4. Tecnologias Utilizadas
+
+* **Linguagem Principal:** Python 3.10
+* **Framework Web & API:** Flask, Flask-Session
+* **Base de Dados:** PostgreSQL
+* **Driver DB:** `psycopg2-binary`
+* **Comunicações HTTP:** `requests`
+* **Protocolo IoT:** MQTT (`paho-mqtt`)
+* **Orquestração:** Docker & Docker Compose
+* **Frontend:** HTML5, CSS3, Jinja2
+
