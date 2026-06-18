@@ -1,47 +1,39 @@
-# Relatório de Desenvolvimento: Aplicação Web com Arquitetura de Microserviços (Docker & Sockets)
-
-Este documento descreve o desenvolvimento, arquitetura e funcionamento de um projeto baseado em contentores Docker. O projeto implementa uma aplicação Web (Frontend/Gateway) e um servidor de dados (Backend/Base de Dados) que comunicam de forma assíncrona através de sockets TCP.
+# Relatório de Desenvolvimento: Arquitetura Cliente/Servidor com Contentorização e Sockets TCP
 
 ## 1. Visão Geral do Projeto
-A aplicação consiste num sistema de gestão de "memórias" (conteúdos multimédia associados a localizações geográficas), construído em Python com a framework **Flask**. Para garantir o isolamento e escalabilidade, o sistema foi dividido em dois contentores distintos orquestrados através de **Docker Compose**:
-1. **Servidor Web (`web_app`)**: Gere a interface de utilizador, autenticação, sessões e submissão de ficheiros.
-2. **Servidor de Dados (`data_app`)**: Atua como uma base de dados *NoSQL* baseada em ficheiros JSON, recebendo comandos de leitura e escrita através de Sockets.
+Este documento detalha o desenvolvimento e a arquitetura de um Sistema Distribuído para gestão de conteúdos multimédia e localizações geográficas. O projeto adota um modelo de comunicação **Cliente/Servidor**, separando logicamente a camada de apresentação da camada de persistência de dados. 
 
-## 2. Arquitetura e Contentores (Docker & Docker Compose)
+Para garantir o isolamento, a interoperabilidade e a consistência do ambiente de execução, o sistema foi integralmente contentorizado utilizando o motor Docker, sendo composto por dois nós independentes:
+1. **Servidor Web (`web_app`)**: Atua como o cliente no modelo de distribuição, gerindo a interface, as sessões dos utilizadores e a lógica de apresentação.
+2. **Servidor de Dados (`data_app`)**: Atua como o servidor de persistência, processando pedidos de leitura e escrita num sistema de ficheiros estruturado em formato JSON.
 
-A infraestrutura é inteiramente gerida pelo `docker-compose.yml`, que define a relação e as portas expostas entre os contentores. Ambos partilham a mesma imagem baseada num único `Dockerfile` (`python:3.10-slim`), mas executam comandos diferentes no arranque.
+## 2. Arquitetura e Orquestração (Docker Compose)
+A infraestrutura do sistema é orquestrada através do ficheiro `docker-compose.yml`, que estabelece a topologia da rede e o isolamento dos processos.
 
-### 2.1. Docker Compose
-* **`servidor_dados`**: Arranca correndo o script `DataServer.py` e não expõe portas para a máquina *host*, sendo acessível apenas dentro da rede interna do Docker (garantindo segurança).
-* **`servidor_web`**: Arranca correndo `Server.py`, expõe a porta `5000` para a máquina *host* e tem uma diretiva `depends_on: - servidor_dados`, indicando que o servidor de dados deve iniciar primeiro.
+* **Isolamento de Rede**: Foi criada uma rede interna do tipo *bridge* (`rede-sockets`). O contentor `data_app` não expõe qualquer porta para a máquina *host*, garantindo que a base de dados em ficheiros está estritamente protegida contra acessos externos. 
+* **Acesso Externo**: Apenas o contentor `web_app` expõe a porta `5000` para a máquina hospedeira, centralizando o tráfego HTTP dos utilizadores.
+* **Gestão de Dependências de Arranque**: A diretiva `depends_on` garante que o servidor Web apenas inicia o seu processo após o servidor de dados estar instanciado na rede virtual.
 
-### 2.2. Gestão de Arranque (Handshake)
-Para evitar que o Servidor Web tente aceder ao Servidor de Dados antes de este estar completamente "acordado" e pronto a aceitar ligações, foi implementado um mecanismo de *Handshake* no arranque do `Server.py`:
-* O Servidor Web tenta abrir um socket de teste para a porta do Servidor de Dados repetidamente.
-* Só avança com o arranque da interface Web (porta 5000) depois de receber resposta bem-sucedida do contentor de dados.
+## 3. Comunicação Inter-Processos (Sockets TCP e JSON)
+Em conformidade com os requisitos iniciais, a comunicação entre o Servidor Web e o Servidor de Dados foi implementada utilizando a interface de **Sockets** ao nível da camada de transporte.
 
-## 3. Comunicação Interna (Sockets TCP)
+### 3.1. Protocolo de Transporte (TCP)
+Foi adotado o protocolo **TCP (Transmission Control Protocol)** (`socket.SOCK_STREAM`) para garantir uma comunicação orientada à conexão, fiável e que preserva a ordem de transmissão dos pacotes de dados. Isto assegura que a transferência de operações de leitura e escrita entre os contentores não sofre perdas.
 
-Uma das características principais deste projeto é o abandono de chamadas HTTP/REST convencionais entre a Web e a Base de Dados em prol de **Sockets TCP Puros**.
+### 3.2. Resolução da Heterogeneidade (JSON)
+Para contornar os problemas clássicos de heterogeneidade de hardware em sistemas distribuídos (como discrepâncias de alinhamento ou ordenação de bytes *Big Endian* vs *Little Endian*), evitou-se a transmissão de estruturas binárias puras. 
+A troca de mensagens foi implementada através do envio de *strings* serializadas em formato **JSON** e codificadas em UTF-8. O protocolo aplicacional customizado define uma estrutura chave-valor para cada pedido, por exemplo:
+`{"acao": "VERIFY_USER", "dados": {"email": "...", "password": "..."}}`
 
-### 3.1. Protocolo Customizado
-A comunicação é feita através do envio de *strings* formatadas e codificadas em bytes (`utf-8`). Foi criado um protocolo leve com três partes divididas por barras verticais (`|`):
-`COMANDO | NOME_DO_FICHEIRO | DADOS_JSON`
+O Servidor de Dados descodifica o fluxo de bytes, interpreta a ação solicitada, interage com os ficheiros locais correspondentes (`users.json` ou `conteudos.json`) e devolve uma resposta estruturada de volta pelo socket.
 
-* **GET**: O Servidor Web envia `GET|users.json`. O Servidor de Dados lê o ficheiro internamente e devolve a totalidade dos dados em formato JSON nativo.
-* **POST**: O Servidor Web transforma os dicionários Python em *strings* JSON e envia, por exemplo, `POST|users.json|[{"email": "...", "password": "..."}]`. O servidor de dados guarda a string num ficheiro físico e responde com `"SUCESSO"`.
+## 4. Camada de Apresentação e Funcionalidades (Flask)
+O contentor Web aloja a aplicação desenvolvida em Python (Flask) e foca-se exclusivamente na interação com o utilizador final, delegando a persistência para o `data_app`.
 
-### 3.2. Vantagens da Abordagem
-* Comunicação super-rápida, direta na camada de transporte (TCP) sem o *overhead* adicional de cabeçalhos HTTP.
-* Controlo total sobre o *buffer* de dados e gestão de *timeouts* nas operações vitais da aplicação.
-
-## 4. Funcionalidades da Aplicação Web (Flask)
-
-O contentor do Servidor Web foca-se puramente na lógica de interface e sessão:
-* **Autenticação de Utilizadores**: Registo, Login e Logout geridos com segurança através do `flask_session` (sessões baseadas no sistema de ficheiros e não em *cookies* inseguros).
-* **Gestão de Conteúdos (CRUD)**: Possibilidade de listar, adicionar, editar e apagar memórias (com título, descrição, tipo de local, coordenadas GPS e upload de ficheiro multimédia associado).
-* **Internacionalização (i18n)**: Implementação de um sistema dinâmico de tradução (Português/Inglês) que injeta as variáveis no contexto dos templates Jinja2 e permite a mudança de idioma em tempo real via rotas da sessão.
-* **Processamento de *Uploads***: Ficheiros de imagem ou documentos são guardados na pasta estática do contentor Web, gerando UUIDs únicos para evitar colisões de nomes, e mantendo apenas a referência (nome) na base de dados JSON.
+* **Autenticação e Sessões**: Gestão de acessos (Login/Logout) suportada pelo `flask_session`, com armazenamento de sessões seguro (Server-side) em detrimento de cookies vulneráveis no cliente.
+* **Operações CRUD**: Lógica de negócio para listagem, inserção, pesquisa e eliminação de conteúdos. A aplicação Web processa os pedidos HTTP recebidos e traduz os mesmos para chamadas RPC (*Remote Procedure Call*) simuladas através dos Sockets TCP.
+* **Internacionalização (i18n)**: Sistema dinâmico de tradução através da injeção de dicionários no contexto dos *templates* Jinja2, permitindo a alternância de idiomas.
+* **Gestão de *Uploads***: Os ficheiros físicos (imagens/vídeos) são armazenados num volume local no contentor Web. Para evitar colisões, o sistema gera UUIDs (Identificadores Únicos Universais) para os nomes dos ficheiros, transmitindo apenas este identificador para o Servidor de Dados.
 
 ## 5. Conclusão
-Este projeto evidencia os fundamentos críticos na construção de sistemas distribuídos modernos: contentorização eficaz para padronização de ambientes de execução, independência de microserviços e comunicação baixo-nível síncrona/assíncrona através da implementação customizada de Sockets entre as pontes do ecossistema.
+O desenvolvimento desta solução reflete a aplicação prática dos conceitos centrais de Computação Distribuída. A separação estrita entre a camada de apresentação e os dados mitiga pontos únicos de falha e facilita a escalabilidade independente de cada módulo. Adicionalmente, o uso de contentores resolve os problemas de inconsistência ambiental, enquanto a comunicação via TCP com *payloads* em JSON garante interoperabilidade, eficiência e fiabilidade na troca de informações entre os processos distribuídos.
